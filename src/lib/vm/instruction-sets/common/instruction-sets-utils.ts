@@ -1,42 +1,42 @@
 import {
-  isPayToPublicKey,
-  isPayToPublicKeyHash,
-  isPayToScriptHash20,
-  isPayToScriptHash32,
+    isPayToPublicKey,
+    isPayToPublicKeyHash,
+    isPayToScriptHash20,
+    isPayToScriptHash32
 } from '../../../address/address.js';
 import {
-  binToHex,
-  flattenBinArray,
-  numberToBinUint16LE,
-  numberToBinUint32LE,
+    binToHex,
+    flattenBinArray,
+    numberToBinUint16LE,
+    numberToBinUint32LE
 } from '../../../format/format.js';
 import type {
-  assembleBytecode,
-  assembleBytecodeBCH,
-  assembleBytecodeBTC,
-  AuthenticationInstruction,
-  AuthenticationInstructionMalformed,
-  AuthenticationInstructionMaybeMalformed,
-  AuthenticationInstructionPush,
-  AuthenticationInstructionPushMalformedLength,
-  AuthenticationInstructions,
-  AuthenticationInstructionsMalformed,
-  AuthenticationInstructionsMaybeMalformed,
-  Output,
-  ReadPosition,
+    assembleBytecode,
+    assembleBytecodeBCH,
+    assembleBytecodeBTC,
+    AuthenticationInstruction,
+    AuthenticationInstructionMalformed,
+    AuthenticationInstructionMaybeMalformed,
+    AuthenticationInstructionPush,
+    AuthenticationInstructionPushMalformedLength,
+    AuthenticationInstructions,
+    AuthenticationInstructionsMalformed,
+    AuthenticationInstructionsMaybeMalformed,
+    Output,
+    ReadPosition
 } from '../../../lib.js';
 import { encodeTransactionOutput } from '../../../message/message.js';
 import { OpcodesBCH } from '../bch/2023/bch-2023-opcodes.js';
-import { OpcodesBTC } from '../btc/btc-opcodes.js';
+import { OpcodesBTC } from '../btc/2025/btc-opcodes.js';
 
 /**
  * A type-guard that checks if the provided instruction is malformed.
  * @param instruction - the instruction to check
  */
 export const authenticationInstructionIsMalformed = (
-  instruction: AuthenticationInstructionMaybeMalformed,
+    instruction: AuthenticationInstructionMaybeMalformed
 ): instruction is AuthenticationInstructionMalformed =>
-  'malformed' in instruction;
+    'malformed' in instruction;
 
 /**
  * A type-guard that checks if the final instruction in the provided array of
@@ -44,22 +44,22 @@ export const authenticationInstructionIsMalformed = (
  * @param instructions - the array of instructions to check
  */
 export const authenticationInstructionsAreMalformed = (
-  instructions: AuthenticationInstructionsMaybeMalformed,
+    instructions: AuthenticationInstructionsMaybeMalformed
 ): instructions is AuthenticationInstructionsMalformed =>
-  instructions.length > 0 &&
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  authenticationInstructionIsMalformed(instructions[instructions.length - 1]!);
+    instructions.length > 0 &&
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    authenticationInstructionIsMalformed(instructions[instructions.length - 1]!);
 
 export const authenticationInstructionsArePushInstructions = (
-  instructions: AuthenticationInstructions,
+    instructions: AuthenticationInstructions
 ): instructions is AuthenticationInstructionPush[] =>
-  instructions.every((instruction) => 'data' in instruction);
+    instructions.every((instruction) => 'data' in instruction);
 
 const enum CommonPushOpcodes {
-  OP_0 = 0x00,
-  OP_PUSHDATA_1 = 0x4c,
-  OP_PUSHDATA_2 = 0x4d,
-  OP_PUSHDATA_4 = 0x4e,
+    OP_0 = 0x00,
+    OP_PUSHDATA_1 = 0x4c,
+    OP_PUSHDATA_2 = 0x4d,
+    OP_PUSHDATA_4 = 0x4e,
 }
 
 const uint8Bytes = 1;
@@ -74,16 +74,16 @@ const uint32Bytes = 4;
  * @param length - the length of the little endian number to read
  */
 export const readLittleEndianNumber = (
-  position: ReadPosition,
-  length: typeof uint8Bytes | typeof uint16Bytes | typeof uint32Bytes,
+    position: ReadPosition,
+    length: typeof uint8Bytes | typeof uint16Bytes | typeof uint32Bytes
 ) => {
-  const view = new DataView(position.bin.buffer, position.index, length);
-  const readAsLittleEndian = true;
-  return length === uint8Bytes
-    ? view.getUint8(0)
-    : length === uint16Bytes
-      ? view.getUint16(0, readAsLittleEndian)
-      : view.getUint32(0, readAsLittleEndian);
+    const view = new DataView(position.bin.buffer, position.index, length);
+    const readAsLittleEndian = true;
+    return length === uint8Bytes
+        ? view.getUint8(0)
+        : length === uint16Bytes
+            ? view.getUint16(0, readAsLittleEndian)
+            : view.getUint32(0, readAsLittleEndian);
 };
 
 /**
@@ -92,13 +92,13 @@ export const readLittleEndianNumber = (
  * @param opcode - an opcode between 0x00 and 0xff
  */
 export const opcodeToPushLength = (
-  opcode: number,
+    opcode: number
 ): typeof uint8Bytes | typeof uint16Bytes | typeof uint32Bytes | 0 =>
-  ({
-    [CommonPushOpcodes.OP_PUSHDATA_1]: uint8Bytes as typeof uint8Bytes,
-    [CommonPushOpcodes.OP_PUSHDATA_2]: uint16Bytes as typeof uint16Bytes,
-    [CommonPushOpcodes.OP_PUSHDATA_4]: uint32Bytes as typeof uint32Bytes,
-  })[opcode] ?? 0;
+    ({
+        [CommonPushOpcodes.OP_PUSHDATA_1]: uint8Bytes as typeof uint8Bytes,
+        [CommonPushOpcodes.OP_PUSHDATA_2]: uint16Bytes as typeof uint16Bytes,
+        [CommonPushOpcodes.OP_PUSHDATA_4]: uint32Bytes as typeof uint32Bytes
+    })[opcode] ?? 0;
 
 /**
  * Decode one virtual machine bytecode instruction from the
@@ -118,52 +118,52 @@ export const opcodeToPushLength = (
  */
 // eslint-disable-next-line complexity
 export const readAuthenticationInstruction = (
-  position: ReadPosition,
+    position: ReadPosition
 ): {
-  instruction: AuthenticationInstructionMaybeMalformed;
-  position: ReadPosition;
+    instruction: AuthenticationInstructionMaybeMalformed;
+    position: ReadPosition;
 } => {
-  const { bin, index } = position;
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const opcode = bin[index]!;
-  if (opcode > CommonPushOpcodes.OP_PUSHDATA_4) {
-    return {
-      instruction: { opcode },
-      position: { bin, index: index + 1 },
-    };
-  }
-  const lengthBytes = opcodeToPushLength(opcode);
+    const { bin, index } = position;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const opcode = bin[index]!;
+    if (opcode > CommonPushOpcodes.OP_PUSHDATA_4) {
+        return {
+            instruction: { opcode },
+            position: { bin, index: index + 1 }
+        };
+    }
+    const lengthBytes = opcodeToPushLength(opcode);
 
-  if (lengthBytes !== 0 && index + lengthBytes >= bin.length) {
-    const sliceStart = index + 1;
-    const sliceEnd = sliceStart + lengthBytes;
-    return {
-      instruction: {
-        expectedLengthBytes: lengthBytes,
-        length: bin.slice(sliceStart, sliceEnd),
-        malformed: true,
-        opcode,
-      },
-      position: { bin, index: sliceEnd },
-    };
-  }
+    if (lengthBytes !== 0 && index + lengthBytes >= bin.length) {
+        const sliceStart = index + 1;
+        const sliceEnd = sliceStart + lengthBytes;
+        return {
+            instruction: {
+                expectedLengthBytes: lengthBytes,
+                length: bin.slice(sliceStart, sliceEnd),
+                malformed: true,
+                opcode
+            },
+            position: { bin, index: sliceEnd }
+        };
+    }
 
-  const dataBytes =
-    lengthBytes === 0
-      ? opcode
-      : readLittleEndianNumber({ bin, index: index + 1 }, lengthBytes);
-  const dataStart = index + 1 + lengthBytes;
-  const dataEnd = dataStart + dataBytes;
-  return {
-    instruction: {
-      data: bin.slice(dataStart, dataEnd),
-      ...(dataEnd > bin.length
-        ? { expectedDataBytes: dataEnd - dataStart, malformed: true }
-        : undefined),
-      opcode,
-    },
-    position: { bin, index: dataEnd },
-  };
+    const dataBytes =
+        lengthBytes === 0
+            ? opcode
+            : readLittleEndianNumber({ bin, index: index + 1 }, lengthBytes);
+    const dataStart = index + 1 + lengthBytes;
+    const dataEnd = dataStart + dataBytes;
+    return {
+        instruction: {
+            data: bin.slice(dataStart, dataEnd),
+            ...(dataEnd > bin.length
+                ? { expectedDataBytes: dataEnd - dataStart, malformed: true }
+                : undefined),
+            opcode
+        },
+        position: { bin, index: dataEnd }
+    };
 };
 
 /**
@@ -173,10 +173,10 @@ export const readAuthenticationInstruction = (
  * @deprecated use `structuredClone` instead
  */
 export const cloneAuthenticationInstruction = (
-  instruction: AuthenticationInstruction,
+    instruction: AuthenticationInstruction
 ): AuthenticationInstruction => ({
-  ...('data' in instruction ? { data: instruction.data } : {}),
-  opcode: instruction.opcode,
+    ...('data' in instruction ? { data: instruction.data } : {}),
+    opcode: instruction.opcode
 });
 
 /**
@@ -189,23 +189,23 @@ export const cloneAuthenticationInstruction = (
  * @param bytecode - the authentication virtual machine bytecode to decode
  */
 export const decodeAuthenticationInstructions = (bytecode: Uint8Array) => {
-  const instructions = [] as AuthenticationInstructionsMaybeMalformed;
-  // eslint-disable-next-line functional/no-let
-  let i = 0;
-  // eslint-disable-next-line functional/no-loop-statements
-  while (i < bytecode.length) {
-    const { instruction, position } = readAuthenticationInstruction({
-      bin: bytecode,
-      index: i,
-    });
-    // eslint-disable-next-line functional/no-expression-statements
-    i = position.index;
-    // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data
-    (instructions as AuthenticationInstruction[]).push(
-      instruction as AuthenticationInstruction,
-    );
-  }
-  return instructions;
+    const instructions = [] as AuthenticationInstructionsMaybeMalformed;
+    // eslint-disable-next-line functional/no-let
+    let i = 0;
+    // eslint-disable-next-line functional/no-loop-statements
+    while (i < bytecode.length) {
+        const { instruction, position } = readAuthenticationInstruction({
+            bin: bytecode,
+            index: i
+        });
+        // eslint-disable-next-line functional/no-expression-statements
+        i = position.index;
+        // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data
+        (instructions as AuthenticationInstruction[]).push(
+            instruction as AuthenticationInstruction
+        );
+    }
+    return instructions;
 };
 
 /**
@@ -215,15 +215,15 @@ export const decodeAuthenticationInstructions = (bytecode: Uint8Array) => {
  */
 const isMultiWordPush = (opcode: number) => opcode !== CommonPushOpcodes.OP_0;
 const formatAsmPushHex = (data: Uint8Array) =>
-  data.length > 0 ? `0x${binToHex(data)}` : '';
+    data.length > 0 ? `0x${binToHex(data)}` : '';
 const formatMissingBytesAsm = (missing: number) =>
-  `[missing ${missing} byte${missing === 1 ? '' : 's'}]`;
+    `[missing ${missing} byte${missing === 1 ? '' : 's'}]`;
 const hasMalformedLength = (
-  instruction: AuthenticationInstructionMalformed,
+    instruction: AuthenticationInstructionMalformed
 ): instruction is AuthenticationInstructionPushMalformedLength =>
-  'length' in instruction;
+    'length' in instruction;
 const isPushData = (pushOpcode: number) =>
-  pushOpcode >= CommonPushOpcodes.OP_PUSHDATA_1;
+    pushOpcode >= CommonPushOpcodes.OP_PUSHDATA_1;
 
 /**
  * Disassemble a malformed authentication instruction into a string description.
@@ -232,22 +232,22 @@ const isPushData = (pushOpcode: number) =>
  * disassemble
  */
 export const disassembleAuthenticationInstructionMalformed = (
-  opcodes: { [opcode: number]: string },
-  instruction: AuthenticationInstructionMalformed,
+    opcodes: { [opcode: number]: string },
+    instruction: AuthenticationInstructionMalformed
 ): string =>
-  `${opcodes[instruction.opcode] ?? 'OP_UNKNOWN'} ${
-    hasMalformedLength(instruction)
-      ? `${formatAsmPushHex(instruction.length)}${formatMissingBytesAsm(
-          instruction.expectedLengthBytes - instruction.length.length,
-        )}`
-      : `${
-          isPushData(instruction.opcode)
-            ? `${instruction.expectedDataBytes} `
-            : ''
-        }${formatAsmPushHex(instruction.data)}${formatMissingBytesAsm(
-          instruction.expectedDataBytes - instruction.data.length,
-        )}`
-  }`;
+    `${opcodes[instruction.opcode] ?? 'OP_UNKNOWN'} ${
+        hasMalformedLength(instruction)
+            ? `${formatAsmPushHex(instruction.length)}${formatMissingBytesAsm(
+                instruction.expectedLengthBytes - instruction.length.length
+            )}`
+            : `${
+                isPushData(instruction.opcode)
+                    ? `${instruction.expectedDataBytes} `
+                    : ''
+            }${formatAsmPushHex(instruction.data)}${formatMissingBytesAsm(
+                instruction.expectedDataBytes - instruction.data.length
+            )}`
+    }`;
 
 /**
  * Disassemble a properly-formed authentication instruction into a string
@@ -256,16 +256,16 @@ export const disassembleAuthenticationInstructionMalformed = (
  * @param instruction - the instruction to disassemble
  */
 export const disassembleAuthenticationInstruction = (
-  opcodes: { [opcode: number]: string },
-  instruction: AuthenticationInstruction,
+    opcodes: { [opcode: number]: string },
+    instruction: AuthenticationInstruction
 ): string =>
-  `${opcodes[instruction.opcode] ?? 'OP_UNKNOWN'}${
-    'data' in instruction && isMultiWordPush(instruction.opcode)
-      ? ` ${
-          isPushData(instruction.opcode) ? `${instruction.data.length} ` : ''
-        }${formatAsmPushHex(instruction.data)}`
-      : ''
-  }`;
+    `${opcodes[instruction.opcode] ?? 'OP_UNKNOWN'}${
+        'data' in instruction && isMultiWordPush(instruction.opcode)
+            ? ` ${
+                isPushData(instruction.opcode) ? `${instruction.data.length} ` : ''
+            }${formatAsmPushHex(instruction.data)}`
+            : ''
+    }`;
 
 /**
  * Disassemble a single {@link AuthenticationInstructionMaybeMalformed} into its
@@ -275,12 +275,12 @@ export const disassembleAuthenticationInstruction = (
  * @param instruction - the instruction to disassemble
  */
 export const disassembleAuthenticationInstructionMaybeMalformed = (
-  opcodes: { [opcode: number]: string },
-  instruction: AuthenticationInstructionMaybeMalformed,
+    opcodes: { [opcode: number]: string },
+    instruction: AuthenticationInstructionMaybeMalformed
 ): string =>
-  authenticationInstructionIsMalformed(instruction)
-    ? disassembleAuthenticationInstructionMalformed(opcodes, instruction)
-    : disassembleAuthenticationInstruction(opcodes, instruction);
+    authenticationInstructionIsMalformed(instruction)
+        ? disassembleAuthenticationInstructionMalformed(opcodes, instruction)
+        : disassembleAuthenticationInstruction(opcodes, instruction);
 
 /**
  * Disassemble an array of {@link AuthenticationInstructionMaybeMalformed}
@@ -295,14 +295,14 @@ export const disassembleAuthenticationInstructionMaybeMalformed = (
  * @param instructions - the array of instructions to disassemble
  */
 export const disassembleAuthenticationInstructionsMaybeMalformed = (
-  opcodes: { [opcode: number]: string },
-  instructions: AuthenticationInstructionMaybeMalformed[],
+    opcodes: { [opcode: number]: string },
+    instructions: AuthenticationInstructionMaybeMalformed[]
 ): string =>
-  instructions
-    .map((instruction) =>
-      disassembleAuthenticationInstructionMaybeMalformed(opcodes, instruction),
-    )
-    .join(' ');
+    instructions
+        .map((instruction) =>
+            disassembleAuthenticationInstructionMaybeMalformed(opcodes, instruction)
+        )
+        .join(' ');
 
 /**
  * Disassemble authentication bytecode into a lossless ASM representation. (All
@@ -315,13 +315,13 @@ export const disassembleAuthenticationInstructionsMaybeMalformed = (
  * @param bytecode - the authentication bytecode to disassemble
  */
 export const disassembleBytecode = (
-  opcodes: { [opcode: number]: string },
-  bytecode: Uint8Array,
+    opcodes: { [opcode: number]: string },
+    bytecode: Uint8Array
 ) =>
-  disassembleAuthenticationInstructionsMaybeMalformed(
-    opcodes,
-    decodeAuthenticationInstructions(bytecode),
-  );
+    disassembleAuthenticationInstructionsMaybeMalformed(
+        opcodes,
+        decodeAuthenticationInstructions(bytecode)
+    );
 
 /**
  * Disassemble BCH authentication bytecode into its ASM representation.
@@ -334,10 +334,10 @@ export const disassembleBytecode = (
  * @param bytecode - the virtual machine bytecode to disassemble
  */
 export const disassembleBytecodeBCH = (bytecode: Uint8Array) =>
-  disassembleAuthenticationInstructionsMaybeMalformed(
-    OpcodesBCH,
-    decodeAuthenticationInstructions(bytecode),
-  );
+    disassembleAuthenticationInstructionsMaybeMalformed(
+        OpcodesBCH,
+        decodeAuthenticationInstructions(bytecode)
+    );
 
 /**
  * Disassemble BTC authentication bytecode into its ASM representation.
@@ -350,10 +350,10 @@ export const disassembleBytecodeBCH = (bytecode: Uint8Array) =>
  * @param bytecode - the virtual machine bytecode to disassemble
  */
 export const disassembleBytecodeBTC = (bytecode: Uint8Array) =>
-  disassembleAuthenticationInstructionsMaybeMalformed(
-    OpcodesBTC,
-    decodeAuthenticationInstructions(bytecode),
-  );
+    disassembleAuthenticationInstructionsMaybeMalformed(
+        OpcodesBTC,
+        decodeAuthenticationInstructions(bytecode)
+    );
 
 /**
  * Create an object where each key is an opcode identifier and each value is
@@ -361,28 +361,28 @@ export const disassembleBytecodeBTC = (bytecode: Uint8Array) =>
  * @param opcodes - An opcode enum, e.g. {@link OpcodesBCH}
  */
 export const generateBytecodeMap = (opcodes: { [opcode: string]: unknown }) =>
-  Object.entries(opcodes)
-    .filter<[string, number]>(
-      (entry): entry is [string, number] => typeof entry[1] === 'number',
-    )
-    .reduce<{ [opcode: string]: Uint8Array }>(
-      (identifiers, pair) => ({
-        ...identifiers,
-        [pair[0]]: Uint8Array.of(pair[1]),
-      }),
-      {},
-    );
+    Object.entries(opcodes)
+        .filter<[string, number]>(
+            (entry): entry is [string, number] => typeof entry[1] === 'number'
+        )
+        .reduce<{ [opcode: string]: Uint8Array }>(
+            (identifiers, pair) => ({
+                ...identifiers,
+                [pair[0]]: Uint8Array.of(pair[1])
+            }),
+            {}
+        );
 
 const getInstructionLengthBytes = (
-  instruction: AuthenticationInstructionPush,
+    instruction: AuthenticationInstructionPush
 ) => {
-  const { opcode } = instruction;
-  const expectedLength = opcodeToPushLength(opcode);
-  return expectedLength === uint8Bytes
-    ? Uint8Array.of(instruction.data.length)
-    : expectedLength === uint16Bytes
-      ? numberToBinUint16LE(instruction.data.length)
-      : numberToBinUint32LE(instruction.data.length);
+    const { opcode } = instruction;
+    const expectedLength = opcodeToPushLength(opcode);
+    return expectedLength === uint8Bytes
+        ? Uint8Array.of(instruction.data.length)
+        : expectedLength === uint16Bytes
+            ? numberToBinUint16LE(instruction.data.length)
+            : numberToBinUint32LE(instruction.data.length);
 };
 
 /**
@@ -390,46 +390,46 @@ const getInstructionLengthBytes = (
  * @param instruction - the instruction to encode
  */
 export const encodeAuthenticationInstruction = (
-  instruction: AuthenticationInstruction,
+    instruction: AuthenticationInstruction
 ) =>
-  Uint8Array.from([
-    instruction.opcode,
-    ...('data' in instruction
-      ? [
-          ...(isPushData(instruction.opcode)
-            ? getInstructionLengthBytes(instruction)
-            : []),
-          ...instruction.data,
-        ]
-      : []),
-  ]);
+    Uint8Array.from([
+        instruction.opcode,
+        ...('data' in instruction
+            ? [
+                ...(isPushData(instruction.opcode)
+                    ? getInstructionLengthBytes(instruction)
+                    : []),
+                ...instruction.data
+            ]
+            : [])
+    ]);
 
 /**
  * Re-encode a malformed authentication instruction.
  * @param instruction - the {@link AuthenticationInstructionMalformed} to encode
  */
 export const encodeAuthenticationInstructionMalformed = (
-  instruction: AuthenticationInstructionMalformed,
+    instruction: AuthenticationInstructionMalformed
 ) => {
-  const { opcode } = instruction;
+    const { opcode } = instruction;
 
-  if (hasMalformedLength(instruction)) {
-    return Uint8Array.from([opcode, ...instruction.length]);
-  }
+    if (hasMalformedLength(instruction)) {
+        return Uint8Array.from([opcode, ...instruction.length]);
+    }
 
-  if (isPushData(opcode)) {
-    return Uint8Array.from([
-      opcode,
-      ...(opcode === CommonPushOpcodes.OP_PUSHDATA_1
-        ? Uint8Array.of(instruction.expectedDataBytes)
-        : opcode === CommonPushOpcodes.OP_PUSHDATA_2
-          ? numberToBinUint16LE(instruction.expectedDataBytes)
-          : numberToBinUint32LE(instruction.expectedDataBytes)),
-      ...instruction.data,
-    ]);
-  }
+    if (isPushData(opcode)) {
+        return Uint8Array.from([
+            opcode,
+            ...(opcode === CommonPushOpcodes.OP_PUSHDATA_1
+                ? Uint8Array.of(instruction.expectedDataBytes)
+                : opcode === CommonPushOpcodes.OP_PUSHDATA_2
+                    ? numberToBinUint16LE(instruction.expectedDataBytes)
+                    : numberToBinUint32LE(instruction.expectedDataBytes)),
+            ...instruction.data
+        ]);
+    }
 
-  return Uint8Array.from([opcode, ...instruction.data]);
+    return Uint8Array.from([opcode, ...instruction.data]);
 };
 
 /**
@@ -438,18 +438,18 @@ export const encodeAuthenticationInstructionMalformed = (
  * to encode
  */
 export const encodeAuthenticationInstructionMaybeMalformed = (
-  instruction: AuthenticationInstructionMaybeMalformed,
+    instruction: AuthenticationInstructionMaybeMalformed
 ): Uint8Array =>
-  authenticationInstructionIsMalformed(instruction)
-    ? encodeAuthenticationInstructionMalformed(instruction)
-    : encodeAuthenticationInstruction(instruction);
+    authenticationInstructionIsMalformed(instruction)
+        ? encodeAuthenticationInstructionMalformed(instruction)
+        : encodeAuthenticationInstruction(instruction);
 
 /**
  * Re-encode an array of valid authentication instructions.
  * @param instructions - the array of valid instructions to encode
  */
 export const encodeAuthenticationInstructions = (
-  instructions: AuthenticationInstruction[],
+    instructions: AuthenticationInstruction[]
 ) => flattenBinArray(instructions.map(encodeAuthenticationInstruction));
 
 /**
@@ -458,21 +458,21 @@ export const encodeAuthenticationInstructions = (
  * {@link AuthenticationInstructionMaybeMalformed}s to encode
  */
 export const encodeAuthenticationInstructionsMaybeMalformed = (
-  instructions: AuthenticationInstructionMaybeMalformed[],
+    instructions: AuthenticationInstructionMaybeMalformed[]
 ) =>
-  flattenBinArray(
-    instructions.map(encodeAuthenticationInstructionMaybeMalformed),
-  );
+    flattenBinArray(
+        instructions.map(encodeAuthenticationInstructionMaybeMalformed)
+    );
 
 export enum VmNumberError {
-  outOfRange = 'Failed to decode VM Number: overflows VM Number range.',
-  requiresMinimal = 'Failed to decode VM Number: the number is not minimally-encoded.',
+    outOfRange = 'Failed to decode VM Number: overflows VM Number range.',
+    requiresMinimal = 'Failed to decode VM Number: the number is not minimally-encoded.',
 }
 
 export const isVmNumberError = (
-  value: VmNumberError | bigint,
+    value: VmNumberError | bigint
 ): value is VmNumberError =>
-  value === VmNumberError.outOfRange || value === VmNumberError.requiresMinimal;
+    value === VmNumberError.outOfRange || value === VmNumberError.requiresMinimal;
 
 const typicalMaximumVmNumberByteLength = 8;
 
@@ -498,67 +498,67 @@ const typicalMaximumVmNumberByteLength = 8;
  */
 // eslint-disable-next-line complexity
 export const vmNumberToBigInt = (
-  bytes: Uint8Array,
-  {
-    maximumVmNumberByteLength = typicalMaximumVmNumberByteLength,
-    requireMinimalEncoding = true,
-  }: {
-    /**
-     * The maximum valid number of bytes in a VM Number.
-     */
-    maximumVmNumberByteLength?: number;
-    /**
-     * If `true`, this method returns an error when parsing non-minimally
-     * encoded VM Numbers.
-     */
-    requireMinimalEncoding?: boolean;
-  } = {
-    maximumVmNumberByteLength: typicalMaximumVmNumberByteLength,
-    requireMinimalEncoding: true,
-  },
+    bytes: Uint8Array,
+    {
+        maximumVmNumberByteLength = typicalMaximumVmNumberByteLength,
+        requireMinimalEncoding = true
+    }: {
+        /**
+         * The maximum valid number of bytes in a VM Number.
+         */
+        maximumVmNumberByteLength?: number;
+        /**
+         * If `true`, this method returns an error when parsing non-minimally
+         * encoded VM Numbers.
+         */
+        requireMinimalEncoding?: boolean;
+    } = {
+        maximumVmNumberByteLength: typicalMaximumVmNumberByteLength,
+        requireMinimalEncoding: true
+    }
 ): VmNumberError | bigint => {
-  if (bytes.length === 0) {
-    return 0n;
-  }
-  if (bytes.length > maximumVmNumberByteLength) {
-    return VmNumberError.outOfRange;
-  }
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const mostSignificantByte = bytes[bytes.length - 1]!;
-  const secondMostSignificantByte = bytes[bytes.length - 1 - 1];
-  const allButTheSignBit = 0b1111_111;
-  const justTheSignBit = 0b1000_0000;
+    if (bytes.length === 0) {
+        return 0n;
+    }
+    if (bytes.length > maximumVmNumberByteLength) {
+        return VmNumberError.outOfRange;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const mostSignificantByte = bytes[bytes.length - 1]!;
+    const secondMostSignificantByte = bytes[bytes.length - 1 - 1];
+    const allButTheSignBit = 0b1111_111;
+    const justTheSignBit = 0b1000_0000;
 
-  if (
-    requireMinimalEncoding &&
-    // eslint-disable-next-line no-bitwise
-    (mostSignificantByte & allButTheSignBit) === 0 &&
-    // eslint-disable-next-line no-bitwise, @typescript-eslint/no-non-null-assertion
-    (bytes.length <= 1 || (secondMostSignificantByte! & justTheSignBit) === 0)
-  ) {
-    return VmNumberError.requiresMinimal;
-  }
+    if (
+        requireMinimalEncoding &&
+        // eslint-disable-next-line no-bitwise
+        (mostSignificantByte & allButTheSignBit) === 0 &&
+        // eslint-disable-next-line no-bitwise, @typescript-eslint/no-non-null-assertion
+        (bytes.length <= 1 || (secondMostSignificantByte! & justTheSignBit) === 0)
+    ) {
+        return VmNumberError.requiresMinimal;
+    }
 
-  const bitsPerByte = 8;
-  const signFlippingByte = 0x80;
-  // eslint-disable-next-line functional/no-let
-  let result = 0n;
-  // eslint-disable-next-line functional/no-let, functional/no-loop-statements, no-plusplus
-  for (let byte = 0; byte < bytes.length; byte++) {
-    // eslint-disable-next-line functional/no-expression-statements,  no-bitwise, @typescript-eslint/no-non-null-assertion
-    result |= BigInt(bytes[byte]!) << BigInt(byte * bitsPerByte);
-  }
+    const bitsPerByte = 8;
+    const signFlippingByte = 0x80;
+    // eslint-disable-next-line functional/no-let
+    let result = 0n;
+    // eslint-disable-next-line functional/no-let, functional/no-loop-statements, no-plusplus
+    for (let byte = 0; byte < bytes.length; byte++) {
+        // eslint-disable-next-line functional/no-expression-statements,  no-bitwise, @typescript-eslint/no-non-null-assertion
+        result |= BigInt(bytes[byte]!) << BigInt(byte * bitsPerByte);
+    }
 
-  /* eslint-disable no-bitwise */
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const isNegative = (bytes[bytes.length - 1]! & signFlippingByte) !== 0;
-  return isNegative
-    ? -(
-        result &
-        ~(BigInt(signFlippingByte) << BigInt(bitsPerByte * (bytes.length - 1)))
-      )
-    : result;
-  /* eslint-enable no-bitwise */
+    /* eslint-disable no-bitwise */
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const isNegative = (bytes[bytes.length - 1]! & signFlippingByte) !== 0;
+    return isNegative
+        ? -(
+            result &
+            ~(BigInt(signFlippingByte) << BigInt(bitsPerByte * (bytes.length - 1)))
+        )
+        : result;
+    /* eslint-enable no-bitwise */
 };
 
 /**
@@ -571,35 +571,35 @@ export const vmNumberToBigInt = (
  */
 // eslint-disable-next-line complexity
 export const bigIntToVmNumber = (integer: bigint): Uint8Array => {
-  if (integer === 0n) {
-    return new Uint8Array();
-  }
+    if (integer === 0n) {
+        return new Uint8Array();
+    }
 
-  const bytes: number[] = [];
-  const isNegative = integer < 0;
-  const byteStates = 0xff;
-  const bitsPerByte = 8;
-  // eslint-disable-next-line functional/no-let
-  let remaining = isNegative ? -integer : integer;
-  // eslint-disable-next-line functional/no-loop-statements
-  while (remaining > 0) {
-    // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data, no-bitwise
-    bytes.push(Number(remaining & BigInt(byteStates)));
-    // eslint-disable-next-line functional/no-expression-statements, no-bitwise
-    remaining >>= BigInt(bitsPerByte);
-  }
+    const bytes: number[] = [];
+    const isNegative = integer < 0;
+    const byteStates = 0xff;
+    const bitsPerByte = 8;
+    // eslint-disable-next-line functional/no-let
+    let remaining = isNegative ? -integer : integer;
+    // eslint-disable-next-line functional/no-loop-statements
+    while (remaining > 0) {
+        // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data, no-bitwise
+        bytes.push(Number(remaining & BigInt(byteStates)));
+        // eslint-disable-next-line functional/no-expression-statements, no-bitwise
+        remaining >>= BigInt(bitsPerByte);
+    }
 
-  const signFlippingByte = 0x80;
-  // eslint-disable-next-line no-bitwise, functional/no-conditional-statements, @typescript-eslint/no-non-null-assertion
-  if ((bytes[bytes.length - 1]! & signFlippingByte) > 0) {
-    // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data
-    bytes.push(isNegative ? signFlippingByte : 0x00);
-    // eslint-disable-next-line functional/no-conditional-statements
-  } else if (isNegative) {
-    // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data, no-bitwise
-    bytes[bytes.length - 1] |= signFlippingByte;
-  }
-  return new Uint8Array(bytes);
+    const signFlippingByte = 0x80;
+    // eslint-disable-next-line no-bitwise, functional/no-conditional-statements, @typescript-eslint/no-non-null-assertion
+    if ((bytes[bytes.length - 1]! & signFlippingByte) > 0) {
+        // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data
+        bytes.push(isNegative ? signFlippingByte : 0x00);
+        // eslint-disable-next-line functional/no-conditional-statements
+    } else if (isNegative) {
+        // eslint-disable-next-line functional/no-expression-statements, functional/immutable-data, no-bitwise
+        bytes[bytes.length - 1] |= signFlippingByte;
+    }
+    return new Uint8Array(bytes);
 };
 
 /**
@@ -614,17 +614,17 @@ export const bigIntToVmNumber = (integer: bigint): Uint8Array => {
  * @param item - the stack item to check for truthiness
  */
 export const stackItemIsTruthy = (item: Uint8Array) => {
-  const signFlippingByte = 0x80;
-  // eslint-disable-next-line functional/no-let, functional/no-loop-statements, no-plusplus
-  for (let i = 0; i < item.length; i++) {
-    if (item[i] !== 0) {
-      if (i === item.length - 1 && item[i] === signFlippingByte) {
-        return false;
-      }
-      return true;
+    const signFlippingByte = 0x80;
+    // eslint-disable-next-line functional/no-let, functional/no-loop-statements, no-plusplus
+    for (let i = 0; i < item.length; i++) {
+        if (item[i] !== 0) {
+            if (i === item.length - 1 && item[i] === signFlippingByte) {
+                return false;
+            }
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 };
 
 /**
@@ -636,25 +636,25 @@ export const stackItemIsTruthy = (item: Uint8Array) => {
  * @param value - the boolean value to convert
  */
 export const booleanToVmNumber = (value: boolean) =>
-  value ? bigIntToVmNumber(1n) : bigIntToVmNumber(0n);
+    value ? bigIntToVmNumber(1n) : bigIntToVmNumber(0n);
 
 const enum Opcodes {
-  OP_0 = 0x00,
-  OP_PUSHBYTES_20 = 0x14,
-  OP_PUSHBYTES_33 = 0x21,
-  OP_PUSHBYTES_65 = 0x41,
-  OP_1NEGATE = 0x4f,
-  OP_RESERVED = 0x50,
-  OP_1 = 0x51,
-  OP_16 = 0x60,
-  OP_RETURN = 0x6a,
-  OP_DUP = 0x76,
-  OP_EQUAL = 0x87,
-  OP_EQUALVERIFY = 0x88,
-  OP_SHA256 = 0xa8,
-  OP_HASH160 = 0xa9,
-  OP_CHECKSIG = 0xac,
-  OP_CHECKMULTISIG = 0xae,
+    OP_0 = 0x00,
+    OP_PUSHBYTES_20 = 0x14,
+    OP_PUSHBYTES_33 = 0x21,
+    OP_PUSHBYTES_65 = 0x41,
+    OP_1NEGATE = 0x4f,
+    OP_RESERVED = 0x50,
+    OP_1 = 0x51,
+    OP_16 = 0x60,
+    OP_RETURN = 0x6a,
+    OP_DUP = 0x76,
+    OP_EQUAL = 0x87,
+    OP_EQUALVERIFY = 0x88,
+    OP_SHA256 = 0xa8,
+    OP_HASH160 = 0xa9,
+    OP_CHECKSIG = 0xac,
+    OP_CHECKMULTISIG = 0xae,
 }
 
 /**
@@ -667,18 +667,18 @@ const enum Opcodes {
 export const isPushOperation = (opcode: number) => opcode <= Opcodes.OP_16;
 
 export const isPushOnly = (bytecode: Uint8Array) => {
-  const instructions = decodeAuthenticationInstructions(bytecode);
-  return instructions.every((instruction) =>
-    isPushOperation(instruction.opcode),
-  );
+    const instructions = decodeAuthenticationInstructions(bytecode);
+    return instructions.every((instruction) =>
+        isPushOperation(instruction.opcode)
+    );
 };
 
 export const isPushOnlyAccurate = (bytecode: Uint8Array) => {
-  const instructions = decodeAuthenticationInstructions(bytecode);
-  return (
-    !authenticationInstructionsAreMalformed(instructions) &&
-    authenticationInstructionsArePushInstructions(instructions)
-  );
+    const instructions = decodeAuthenticationInstructions(bytecode);
+    return (
+        !authenticationInstructionsAreMalformed(instructions) &&
+        authenticationInstructionsArePushInstructions(instructions)
+    );
 };
 
 /**
@@ -687,28 +687,28 @@ export const isPushOnlyAccurate = (bytecode: Uint8Array) => {
  * @param lockingBytecode - the locking bytecode to test
  */
 export const isArbitraryDataOutput = (lockingBytecode: Uint8Array) =>
-  lockingBytecode.length >= 1 &&
-  lockingBytecode[0] === Opcodes.OP_RETURN &&
-  isPushOnly(lockingBytecode.slice(1));
+    lockingBytecode.length >= 1 &&
+    lockingBytecode[0] === Opcodes.OP_RETURN &&
+    isPushOnly(lockingBytecode.slice(1));
 
 const enum Dust {
-  /**
-   * The standard dust limit relies on a hard-coded expectation of a typical
-   * P2PKH-spending input (spent using a 72-byte ECDSA signature).
-   *
-   * This value includes:
-   * - Outpoint transaction hash: 32 bytes
-   * - Outpoint index: 4 bytes
-   * - Unlocking bytecode length: 1 byte
-   * - Push of 72-byte ECDSA signature: 72 + 1 byte
-   * - Push of public key: 33 + 1 byte
-   * - Sequence number: 4 bytes
-   */
-  p2pkhInputLength = 148,
-  minimumFeeMultiple = 3,
-  standardDustRelayFee = 1000,
-  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
-  bytesPerKb = 1000,
+    /**
+     * The standard dust limit relies on a hard-coded expectation of a typical
+     * P2PKH-spending input (spent using a 72-byte ECDSA signature).
+     *
+     * This value includes:
+     * - Outpoint transaction hash: 32 bytes
+     * - Outpoint index: 4 bytes
+     * - Unlocking bytecode length: 1 byte
+     * - Push of 72-byte ECDSA signature: 72 + 1 byte
+     * - Push of public key: 33 + 1 byte
+     * - Sequence number: 4 bytes
+     */
+    p2pkhInputLength = 148,
+    minimumFeeMultiple = 3,
+    standardDustRelayFee = 1000,
+    // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
+    bytesPerKb = 1000,
 }
 
 /**
@@ -720,9 +720,9 @@ const enum Dust {
  * @param feeRateSatsPerKb - the fee rate in satoshis per 1000 bytes
  */
 export const getMinimumFee = (length: bigint, feeRateSatsPerKb: bigint) => {
-  if (length < 1n) return 0n;
-  const truncated = (length * feeRateSatsPerKb) / BigInt(Dust.bytesPerKb);
-  return truncated === 0n ? 1n : truncated;
+    if (length < 1n) return 0n;
+    const truncated = (length * feeRateSatsPerKb) / BigInt(Dust.bytesPerKb);
+    return truncated === 0n ? 1n : truncated;
 };
 
 /**
@@ -738,14 +738,14 @@ export const getMinimumFee = (length: bigint, feeRateSatsPerKb: bigint) => {
  * @param dustRelayFeeSatPerKb - the "dust relay fee", defaults to `1000n`
  */
 export const getDustThresholdForLength = (
-  outputLength: number,
-  dustRelayFeeSatPerKb = BigInt(Dust.standardDustRelayFee),
+    outputLength: number,
+    dustRelayFeeSatPerKb = BigInt(Dust.standardDustRelayFee)
 ) => {
-  const expectedTotalLength = outputLength + Dust.p2pkhInputLength;
-  return (
-    BigInt(Dust.minimumFeeMultiple) *
-    getMinimumFee(BigInt(expectedTotalLength), dustRelayFeeSatPerKb)
-  );
+    const expectedTotalLength = outputLength + Dust.p2pkhInputLength;
+    return (
+        BigInt(Dust.minimumFeeMultiple) *
+        getMinimumFee(BigInt(expectedTotalLength), dustRelayFeeSatPerKb)
+    );
 };
 
 /**
@@ -778,14 +778,14 @@ export const getDustThresholdForLength = (
  * @param dustRelayFeeSatPerKb - the "dust relay fee", defaults to `1000n`
  */
 export const getDustThreshold = (
-  output: Output,
-  dustRelayFeeSatPerKb = BigInt(Dust.standardDustRelayFee),
+    output: Output,
+    dustRelayFeeSatPerKb = BigInt(Dust.standardDustRelayFee)
 ) => {
-  if (isArbitraryDataOutput(output.lockingBytecode)) {
-    return 0n;
-  }
-  const encodedOutputLength = encodeTransactionOutput(output).length;
-  return getDustThresholdForLength(encodedOutputLength, dustRelayFeeSatPerKb);
+    if (isArbitraryDataOutput(output.lockingBytecode)) {
+        return 0n;
+    }
+    const encodedOutputLength = encodeTransactionOutput(output).length;
+    return getDustThresholdForLength(encodedOutputLength, dustRelayFeeSatPerKb);
 };
 
 /**
@@ -797,146 +797,146 @@ export const getDustThreshold = (
  * @param dustRelayFeeSatPerKb - the "dust relay fee", defaults to `1000n`
  */
 export const isDustOutput = (
-  output: Output,
-  dustRelayFeeSatPerKb = BigInt(Dust.standardDustRelayFee),
+    output: Output,
+    dustRelayFeeSatPerKb = BigInt(Dust.standardDustRelayFee)
 ) => output.valueSatoshis < getDustThreshold(output, dustRelayFeeSatPerKb);
 
 const enum PublicKey {
-  uncompressedByteLength = 65,
-  uncompressedHeaderByte = 0x04,
-  compressedByteLength = 33,
-  compressedHeaderByteEven = 0x02,
-  compressedHeaderByteOdd = 0x03,
+    uncompressedByteLength = 65,
+    uncompressedHeaderByte = 0x04,
+    compressedByteLength = 33,
+    compressedHeaderByteEven = 0x02,
+    compressedHeaderByteOdd = 0x03,
 }
 
 export const isValidUncompressedPublicKeyEncoding = (publicKey: Uint8Array) =>
-  publicKey.length === PublicKey.uncompressedByteLength &&
-  publicKey[0] === PublicKey.uncompressedHeaderByte;
+    publicKey.length === PublicKey.uncompressedByteLength &&
+    publicKey[0] === PublicKey.uncompressedHeaderByte;
 
 export const isValidCompressedPublicKeyEncoding = (publicKey: Uint8Array) =>
-  publicKey.length === PublicKey.compressedByteLength &&
-  (publicKey[0] === PublicKey.compressedHeaderByteEven ||
-    publicKey[0] === PublicKey.compressedHeaderByteOdd);
+    publicKey.length === PublicKey.compressedByteLength &&
+    (publicKey[0] === PublicKey.compressedHeaderByteEven ||
+        publicKey[0] === PublicKey.compressedHeaderByteOdd);
 
 export const isValidPublicKeyEncoding = (publicKey: Uint8Array) =>
-  isValidCompressedPublicKeyEncoding(publicKey) ||
-  isValidUncompressedPublicKeyEncoding(publicKey);
+    isValidCompressedPublicKeyEncoding(publicKey) ||
+    isValidUncompressedPublicKeyEncoding(publicKey);
 
 // eslint-disable-next-line complexity
 export const pushNumberOpcodeToNumber = (opcode: number) => {
-  if (opcode === Opcodes.OP_0) {
-    return 0;
-  }
-  if (opcode === Opcodes.OP_1NEGATE) {
-    return -1;
-  }
-  if (
-    !Number.isInteger(opcode) ||
-    opcode < Opcodes.OP_1 ||
-    opcode > Opcodes.OP_16
-  ) {
-    return false;
-  }
-  return opcode - Opcodes.OP_RESERVED;
+    if (opcode === Opcodes.OP_0) {
+        return 0;
+    }
+    if (opcode === Opcodes.OP_1NEGATE) {
+        return -1;
+    }
+    if (
+        !Number.isInteger(opcode) ||
+        opcode < Opcodes.OP_1 ||
+        opcode > Opcodes.OP_16
+    ) {
+        return false;
+    }
+    return opcode - Opcodes.OP_RESERVED;
 };
 
 const enum Multisig {
-  minimumInstructions = 4,
-  keyStart = 1,
-  keyEnd = -2,
-  maximumStandardN = 3,
+    minimumInstructions = 4,
+    keyStart = 1,
+    keyEnd = -2,
+    maximumStandardN = 3,
 }
 
 // eslint-disable-next-line complexity
 export const isSimpleMultisig = (lockingBytecode: Uint8Array) => {
-  const instructions = decodeAuthenticationInstructions(lockingBytecode);
-  if (authenticationInstructionsAreMalformed(instructions)) {
-    return false;
-  }
+    const instructions = decodeAuthenticationInstructions(lockingBytecode);
+    if (authenticationInstructionsAreMalformed(instructions)) {
+        return false;
+    }
 
-  const lastIndex = instructions.length - 1;
-  if (
-    instructions.length < Multisig.minimumInstructions ||
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    instructions[lastIndex]!.opcode !== Opcodes.OP_CHECKMULTISIG
-  ) {
-    return false;
-  }
+    const lastIndex = instructions.length - 1;
+    if (
+        instructions.length < Multisig.minimumInstructions ||
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        instructions[lastIndex]!.opcode !== Opcodes.OP_CHECKMULTISIG
+    ) {
+        return false;
+    }
 
-  /**
-   * The required count of signers (the `m` in `m-of-n`).
-   */
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const m = pushNumberOpcodeToNumber(instructions[0]!.opcode);
-  /**
-   * The total count of signers (the `n` in `m-of-n`).
-   */
-  const n = pushNumberOpcodeToNumber(
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    instructions[lastIndex - 1]!.opcode,
-  );
+    /**
+     * The required count of signers (the `m` in `m-of-n`).
+     */
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const m = pushNumberOpcodeToNumber(instructions[0]!.opcode);
+    /**
+     * The total count of signers (the `n` in `m-of-n`).
+     */
+    const n = pushNumberOpcodeToNumber(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        instructions[lastIndex - 1]!.opcode
+    );
 
-  if (n === false || m === false) {
-    return false;
-  }
+    if (n === false || m === false) {
+        return false;
+    }
 
-  const publicKeyInstructions = instructions.slice(
-    Multisig.keyStart,
-    Multisig.keyEnd,
-  );
+    const publicKeyInstructions = instructions.slice(
+        Multisig.keyStart,
+        Multisig.keyEnd
+    );
 
-  if (!authenticationInstructionsArePushInstructions(publicKeyInstructions)) {
-    return false;
-  }
+    if (!authenticationInstructionsArePushInstructions(publicKeyInstructions)) {
+        return false;
+    }
 
-  const publicKeys = publicKeyInstructions.map(
-    (instruction) => instruction.data,
-  );
+    const publicKeys = publicKeyInstructions.map(
+        (instruction) => instruction.data
+    );
 
-  if (publicKeys.some((key) => !isValidPublicKeyEncoding(key))) {
-    return false;
-  }
+    if (publicKeys.some((key) => !isValidPublicKeyEncoding(key))) {
+        return false;
+    }
 
-  return { m, n, publicKeys };
+    return { m, n, publicKeys };
 };
 
 // eslint-disable-next-line complexity
 export const isStandardMultisig = (lockingBytecode: Uint8Array) => {
-  const multisigProperties = isSimpleMultisig(lockingBytecode);
-  if (multisigProperties === false) {
-    return false;
-  }
+    const multisigProperties = isSimpleMultisig(lockingBytecode);
+    if (multisigProperties === false) {
+        return false;
+    }
 
-  const { m, n } = multisigProperties;
-  if (n < 1 || n > Multisig.maximumStandardN || m < 1 || m > n) {
-    return false;
-  }
-  return true;
+    const { m, n } = multisigProperties;
+    if (n < 1 || n > Multisig.maximumStandardN || m < 1 || m > n) {
+        return false;
+    }
+    return true;
 };
 
 export const isStandardOutputBytecode = (lockingBytecode: Uint8Array) =>
-  isPayToPublicKeyHash(lockingBytecode) ||
-  isPayToScriptHash20(lockingBytecode) ||
-  isPayToPublicKey(lockingBytecode) ||
-  isArbitraryDataOutput(lockingBytecode) ||
-  isStandardMultisig(lockingBytecode);
+    isPayToPublicKeyHash(lockingBytecode) ||
+    isPayToScriptHash20(lockingBytecode) ||
+    isPayToPublicKey(lockingBytecode) ||
+    isArbitraryDataOutput(lockingBytecode) ||
+    isStandardMultisig(lockingBytecode);
 
 // eslint-disable-next-line complexity
 export const isStandardOutputBytecode2023 = (lockingBytecode: Uint8Array) =>
-  isPayToPublicKeyHash(lockingBytecode) ||
-  isPayToScriptHash20(lockingBytecode) ||
-  isPayToScriptHash32(lockingBytecode) ||
-  isPayToPublicKey(lockingBytecode) ||
-  isArbitraryDataOutput(lockingBytecode) ||
-  isStandardMultisig(lockingBytecode);
+    isPayToPublicKeyHash(lockingBytecode) ||
+    isPayToScriptHash20(lockingBytecode) ||
+    isPayToScriptHash32(lockingBytecode) ||
+    isPayToPublicKey(lockingBytecode) ||
+    isArbitraryDataOutput(lockingBytecode) ||
+    isStandardMultisig(lockingBytecode);
 
 const enum SegWit {
-  minimumLength = 4,
-  maximumLength = 42,
-  OP_0 = 0,
-  OP_1 = 81,
-  OP_16 = 96,
-  versionAndLengthBytes = 2,
+    minimumLength = 4,
+    maximumLength = 42,
+    OP_0 = 0,
+    OP_1 = 81,
+    OP_16 = 96,
+    versionAndLengthBytes = 2,
 }
 
 /**
@@ -946,15 +946,15 @@ const enum SegWit {
  */
 // eslint-disable-next-line complexity
 export const isWitnessProgram = (bytecode: Uint8Array) => {
-  const correctLength =
-    bytecode.length >= SegWit.minimumLength &&
-    bytecode.length <= SegWit.maximumLength;
-  const validVersionPush =
-    bytecode[0] === SegWit.OP_0 ||
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    (bytecode[0]! >= SegWit.OP_1 && bytecode[0]! <= SegWit.OP_16);
-  const correctLengthByte =
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    bytecode[1]! + SegWit.versionAndLengthBytes === bytecode.length;
-  return correctLength && validVersionPush && correctLengthByte;
+    const correctLength =
+        bytecode.length >= SegWit.minimumLength &&
+        bytecode.length <= SegWit.maximumLength;
+    const validVersionPush =
+        bytecode[0] === SegWit.OP_0 ||
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        (bytecode[0]! >= SegWit.OP_1 && bytecode[0]! <= SegWit.OP_16);
+    const correctLengthByte =
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        bytecode[1]! + SegWit.versionAndLengthBytes === bytecode.length;
+    return correctLength && validVersionPush && correctLengthByte;
 };

@@ -1,63 +1,64 @@
 import { ConsensusCommon } from './consensus.js';
 
 const enum ASN1 {
-  sequenceTagType = 0x30,
-  integerTagType = 0x02,
+    sequenceTagType = 0x30,
+    integerTagType = 0x02,
 }
 
 /* eslint-disable @typescript-eslint/no-duplicate-enum-values, @typescript-eslint/prefer-literal-enum-member */
 const enum DER {
-  minimumLength = 8,
-  maximumLength = 72,
-  sequenceTagIndex = 0,
-  sequenceLengthIndex = 1,
-  rTagIndex = 2,
-  rLengthIndex = 3,
-  rValueIndex = 4,
-  sequenceTagByte = 1,
-  sequenceLengthByte = 1,
-  integerTagByte = 1,
-  integerLengthByte = 1,
-  sequenceMetadataBytes = sequenceTagByte + sequenceLengthByte,
-  integerMetadataBytes = integerTagByte + integerLengthByte,
-  minimumSValueBytes = 1,
-  minimumNonRValueBytes = sequenceMetadataBytes +
-    integerMetadataBytes +
-    integerMetadataBytes +
-    minimumSValueBytes,
+    minimumLength = 8,
+    maximumLength = 72,
+    sequenceTagIndex = 0,
+    sequenceLengthIndex = 1,
+    rTagIndex = 2,
+    rLengthIndex = 3,
+    rValueIndex = 4,
+    sequenceTagByte = 1,
+    sequenceLengthByte = 1,
+    integerTagByte = 1,
+    integerLengthByte = 1,
+    sequenceMetadataBytes = sequenceTagByte + sequenceLengthByte,
+    integerMetadataBytes = integerTagByte + integerLengthByte,
+    minimumSValueBytes = 1,
+    minimumNonRValueBytes = sequenceMetadataBytes +
+        integerMetadataBytes +
+        integerMetadataBytes +
+        minimumSValueBytes,
 }
+
 /* eslint-enable @typescript-eslint/no-duplicate-enum-values, @typescript-eslint/prefer-literal-enum-member */
 
 const enum Mask {
-  negative = 0x80,
+    negative = 0x80,
 }
 
 const isNegative = (value: number | undefined) =>
-  // eslint-disable-next-line no-bitwise, @typescript-eslint/no-non-null-assertion
-  (value! & Mask.negative) !== 0;
+    // eslint-disable-next-line no-bitwise, @typescript-eslint/no-non-null-assertion
+    (value! & Mask.negative) !== 0;
 
 const hasUnnecessaryPadding = (
-  length: number | undefined,
-  firstByte: number | undefined,
-  secondByte: number | undefined,
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    length: number | undefined,
+    firstByte: number | undefined,
+    secondByte: number | undefined
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 ) => length! > 1 && firstByte === 0 && !isNegative(secondByte);
 
 const isValidInteger = (
-  signature: Uint8Array,
-  tagIndex: number,
-  length: number,
-  valueIndex: number,
-  // eslint-disable-next-line @typescript-eslint/max-params
+    signature: Uint8Array,
+    tagIndex: number,
+    length: number,
+    valueIndex: number
+    // eslint-disable-next-line @typescript-eslint/max-params
 ) =>
-  signature[tagIndex] === ASN1.integerTagType &&
-  length !== 0 &&
-  !isNegative(signature[valueIndex]) &&
-  !hasUnnecessaryPadding(
-    length,
-    signature[valueIndex],
-    signature[valueIndex + 1],
-  );
+    signature[tagIndex] === ASN1.integerTagType &&
+    length !== 0 &&
+    !isNegative(signature[valueIndex]) &&
+    !hasUnnecessaryPadding(
+        length,
+        signature[valueIndex],
+        signature[valueIndex + 1]
+    );
 
 /**
  * Validate a DER-encoded signature.
@@ -85,44 +86,44 @@ const isValidInteger = (
  */
 // eslint-disable-next-line complexity
 export const isValidSignatureEncodingDER = (signature: Uint8Array) => {
-  const correctLengthRange =
-    signature.length > DER.minimumLength &&
-    signature.length < DER.maximumLength;
-  const correctSequenceTagType =
-    signature[DER.sequenceTagIndex] === ASN1.sequenceTagType;
-  const correctSequenceLength =
-    signature[DER.sequenceLengthIndex] ===
-    signature.length - DER.sequenceMetadataBytes;
-  const rLength = signature[DER.rLengthIndex];
-  if (rLength === undefined) {
-    return false;
-  }
-  const consistentRLength =
-    rLength <= signature.length - DER.minimumNonRValueBytes;
-  const rIsValid = isValidInteger(
-    signature,
-    DER.rTagIndex,
-    rLength,
-    DER.rValueIndex,
-  );
-  const sTagIndex = DER.rValueIndex + rLength;
-  const sLengthIndex = sTagIndex + 1;
-  const sLength = signature[sLengthIndex];
-  if (sLength === undefined) {
-    return false;
-  }
-  const sValueIndex = sLengthIndex + 1;
-  const consistentSLength = sValueIndex + sLength === signature.length;
-  const sIsValid = isValidInteger(signature, sTagIndex, sLength, sValueIndex);
-  return (
-    correctLengthRange &&
-    correctSequenceTagType &&
-    correctSequenceLength &&
-    consistentRLength &&
-    rIsValid &&
-    consistentSLength &&
-    sIsValid
-  );
+    const correctLengthRange =
+        signature.length > DER.minimumLength &&
+        signature.length < DER.maximumLength;
+    const correctSequenceTagType =
+        signature[DER.sequenceTagIndex] === ASN1.sequenceTagType;
+    const correctSequenceLength =
+        signature[DER.sequenceLengthIndex] ===
+        signature.length - DER.sequenceMetadataBytes;
+    const rLength = signature[DER.rLengthIndex];
+    if (rLength === undefined) {
+        return false;
+    }
+    const consistentRLength =
+        rLength <= signature.length - DER.minimumNonRValueBytes;
+    const rIsValid = isValidInteger(
+        signature,
+        DER.rTagIndex,
+        rLength,
+        DER.rValueIndex
+    );
+    const sTagIndex = DER.rValueIndex + rLength;
+    const sLengthIndex = sTagIndex + 1;
+    const sLength = signature[sLengthIndex];
+    if (sLength === undefined) {
+        return false;
+    }
+    const sValueIndex = sLengthIndex + 1;
+    const consistentSLength = sValueIndex + sLength === signature.length;
+    const sIsValid = isValidInteger(signature, sTagIndex, sLength, sValueIndex);
+    return (
+        correctLengthRange &&
+        correctSequenceTagType &&
+        correctSequenceLength &&
+        consistentRLength &&
+        rIsValid &&
+        consistentSLength &&
+        sIsValid
+    );
 };
 
 /**
@@ -132,19 +133,46 @@ export const isValidSignatureEncodingDER = (signature: Uint8Array) => {
  * @param transactionSignature - the full transaction signature
  */
 export const isValidSignatureEncodingBCHTransaction = (
-  transactionSignature: Uint8Array,
-  validSigningSerializationTypes: number[],
+    transactionSignature: Uint8Array,
+    validSigningSerializationTypes: number[]
 ) =>
-  transactionSignature.length === 0 ||
-  (validSigningSerializationTypes.includes(
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    transactionSignature[transactionSignature.length - 1]!,
-  ) &&
-    (transactionSignature.length ===
-      ConsensusCommon.schnorrSignatureLength + 1 ||
-      isValidSignatureEncodingDER(
-        transactionSignature.slice(0, transactionSignature.length - 1),
-      )));
+    transactionSignature.length === 0 ||
+    (validSigningSerializationTypes.includes(
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            transactionSignature[transactionSignature.length - 1]!
+        ) &&
+        (transactionSignature.length ===
+            ConsensusCommon.schnorrSignatureLength + 1 ||
+            isValidSignatureEncodingDER(
+                transactionSignature.slice(0, transactionSignature.length - 1)
+            )));
+
+
+/**
+ * Bitcoin-specific check for a transaction signature’s encoding.
+ *
+ * • `transactionSignature.length === 0` – OP_0 (always valid)
+ * • otherwise the last byte **must** be an allowed sighash flag and:
+ *   – the preceding bytes are a canonical DER-encoded ECDSA signature, **or**
+ *   – exactly 64 bytes (Schnorr) for BIP-340/Taproot
+ */
+export const isValidSignatureEncodingTransaction = (
+    transactionSignature: Uint8Array,
+    validSigningSerializationTypes: readonly number[]
+) =>
+    transactionSignature.length === 0 ||
+    (validSigningSerializationTypes.includes(
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            transactionSignature[transactionSignature.length - 1]!
+        ) &&
+        (transactionSignature.length ===
+            ConsensusCommon.schnorrSignatureLength + 1 ||
+            isValidSignatureEncodingDER(
+                transactionSignature.subarray(
+                    0,
+                    transactionSignature.length - 1
+                )
+            )));
 
 /**
  * Split a bitcoin-encoded signature into a signature and signing serialization
@@ -159,6 +187,6 @@ export const isValidSignatureEncodingBCHTransaction = (
  * {@link isValidSignatureEncodingBCHTransaction}
  */
 export const decodeBitcoinSignature = (encodedSignature: Uint8Array) => ({
-  signature: encodedSignature.slice(0, -1),
-  signingSerializationType: encodedSignature.slice(-1),
+    signature: encodedSignature.slice(0, -1),
+    signingSerializationType: encodedSignature.slice(-1)
 });

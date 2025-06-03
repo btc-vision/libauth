@@ -1,47 +1,98 @@
 {
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": { "project": "./tsconfig.json" },
-  "env": { "es6": true },
-  "ignorePatterns": [
-    "node_modules",
-    "build",
-    "coverage",
-    "src/lib/schema/ajv/*.js"
-  ],
-  "extends": ["bitauth"],
-  // "globals": { "BigInt": true, "console": true, "WebAssembly": true },
-  "rules": {
-    "@typescript-eslint/no-unsafe-enum-comparison": "off"
-  },
-  "overrides": [
-    /*
-     * Require all test files to import functionality from the entry point
-     * (to test that exports are available to consumers as expected).
-     */
-    {
-      "files": ["**.spec.ts", "**.bench.ts"],
-      "rules": {
-        "import/no-restricted-paths": [
-          "error",
-          {
-            "zones": [
-              {
-                "target": "./src",
-                "from": "./src/lib",
-                "except": ["lib.ts", "(.*).helper.ts", "(.*).json"]
-              }
-            ]
-          }
-        ],
-        "@typescript-eslint/naming-convention": "off",
-        "@typescript-eslint/no-magic-numbers": "off",
-        "functional/no-expression-statements": "off",
-        "functional/no-conditional-statements": "off",
-        "functional/functional-parameters": "off",
-        "functional/immutable-data": "off",
-        "functional/no-return-void": "off"
-      }
-    }
-  ]
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "project": "./tsconfig.json"
+    },
+    "env": {
+        "es6": true
+    },
+    "ignorePatterns": [
+        "node_modules",
+        "build",
+        "coverage",
+        "src/lib/schema/ajv/*.js"
+    ],
+    "extends": [
+        "bitauth"
+    ],
+    // "globals": { "BigInt": true, "console": true, "WebAssembly": true },
+    "rules": {
+        "@typescript-eslint/no-unsafe-enum-comparison": "off"
+    },
+    "overrides": [
+        /*
+         * Require all test files to import functionality from the entry point
+         * (to test that exports are available to consumers as expected).
+         */
+        {
+            "files": [
+                "**.spec.ts",
+                "**.bench.ts"
+            ],
+            "rules": {
+                "import/no-restricted-paths": [
+                    "error",
+                    {
+                        "zones": [
+                            {
+                                "target": "./src",
+                                "from": "./src/lib",
+                                "except": [
+                                    "lib.ts",
+                                    "(.*).helper.ts",
+                                    "(.*).json"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "@typescript-eslint/naming-convention": "off",
+                "@typescript-eslint/no-magic-numbers": "off",
+                "functional/no-expression-statements": "off",
+                "functional/no-conditional-statements": "off",
+                "functional/functional-parameters": "off",
+                "functional/immutable-data": "off",
+                "functional/no-return-void": "off"
+            }
+        },
+        {
+            "files": [
+                "**.ts"
+            ],
+            "rules": {
+                "@typescript-eslint/naming-convention": "off",
+                "@typescript-eslint/no-magic-numbers": "off",
+                "functional/no-expression-statements": "off",
+                "functional/no-conditional-statements": "off",
+                "functional/functional-parameters": "off",
+                "functional/immutable-data": "off",
+                "functional/no-return-void": "off",
+                "functional/no-loop-statements": "off",
+                "complexity": "off",
+                "@typescript-eslint/no-non-null-assertion": "off",
+                "import/order": "off",
+                "eslint-comments/no-unused-disable": "off",
+                "@typescript-eslint/consistent-type-imports": "off",
+                "multiline-comment-style": "off",
+                "@typescript-eslint/consistent-type-definitions": "off",
+                "@typescript-eslint/sort-type-constituents": "off",
+                "line-comment-position": "off",
+                "sort-keys": "off",
+                "@typescript-eslint/no-unsafe-assignment": "warn",
+                "@typescript-eslint/no-unnecessary-type-arguments": "off",
+                "@typescript-eslint/consistent-indexed-object-style": "off",
+                "no-underscore-dangle": "off",
+                "no-useless-computed-key": "off",
+                "no-plusplus": "off",
+                "no-continue": "off",
+                "functional/no-let": "off",
+                "@typescript-eslint/strict-boolean-expressions": "off",
+                "no-bitwise": "off",
+                "no-negated-condition": "off",
+                "@typescript-eslint/no-mixed-enums": "off",
+                "sort-imports": "off"
+            }
+        }
+    ]
 }

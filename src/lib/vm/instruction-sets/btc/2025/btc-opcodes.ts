@@ -188,7 +188,11 @@ export enum OpcodesBTC {
   OP_NOP8 = 0xb7,
   OP_NOP9 = 0xb8,
   OP_NOP10 = 0xb9,
-  OP_UNKNOWN186 = 0xba,
+
+  /* --- 0xBA ------------------------------------------------------ */
+  OP_CHECKSIGADD = 0xba,
+
+  /* --- 0xBB-0xF9 remain undefined / OP_SUCCESSx in tapscript ----- */
   OP_UNKNOWN187 = 0xbb,
   OP_UNKNOWN188 = 0xbc,
   OP_UNKNOWN189 = 0xbd,
@@ -252,25 +256,12 @@ export enum OpcodesBTC {
   OP_UNKNOWN247 = 0xf7,
   OP_UNKNOWN248 = 0xf8,
   OP_UNKNOWN249 = 0xf9,
-  /**
-   * Used internally in the C++ implementation.
-   */
+
+  /* 0xFA-0xFF are internal/sentry values already present */
   OP_SMALLINTEGER = 0xfa,
-  /**
-   * Used internally in the C++ implementation.
-   */
-  OP_PUBKEYS = 0xfb,
-  OP_UNKNOWN252 = 0xfc,
-  /**
-   * Used internally in the C++ implementation.
-   */
-  OP_PUBKEYHASH = 0xfd,
-  /**
-   * Used internally in the C++ implementation.
-   */
-  OP_PUBKEY = 0xfe,
-  /**
-   * Used internally in the C++ implementation.
-   */
+  OP_PUBKEYS      = 0xfb,
+  OP_UNKNOWN252   = 0xfc,
+  OP_PUBKEYHASH   = 0xfd,
+  OP_PUBKEY       = 0xfe,
   OP_INVALIDOPCODE = 0xff,
 }
