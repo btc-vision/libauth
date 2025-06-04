@@ -117,27 +117,25 @@ import { cloneAuthenticationProgramStateBTC, ConsensusBTC, createAuthenticationP
 
 export const createInstructionSetBTC = (
     standard = true,
+    disablePolicyChecks = false,
     {
-        ripemd160,
-        secp256k1,
-        sha1,
-        sha256
+        ripemd160 = internalRipemd160,
+        secp256k1 = internalSecp256k1,
+        sha1 = internalSha1,
+        sha256 = internalSha256
     }: {
-        ripemd160: { hash: Ripemd160['hash'] };
-        secp256k1: Secp256k1Verify;
-        sha1: { hash: Sha1['hash'] };
-        sha256: { hash: Sha256['hash'] };
-    } = {
-        ripemd160: internalRipemd160,
-        secp256k1: internalSecp256k1,
-        sha1: internalSha1,
-        sha256: internalSha256
-    }
+        ripemd160?: { hash: Ripemd160['hash'] };
+        secp256k1?: Secp256k1Verify;
+        sha1?: { hash: Sha1['hash'] };
+        sha256?: { hash: Sha256['hash'] };
+    } = {}
 ): InstructionSet<
     ResolvedTransactionBTC,
     AuthenticationProgramBTC,
     AuthenticationProgramStateBTC
 > => {
+
+    const policy = !disablePolicyChecks;
 
     const conditionallyPush =
         pushOperationBtc<AuthenticationProgramStateBTC>();
@@ -145,8 +143,7 @@ export const createInstructionSetBTC = (
     return {
 
         clone: cloneAuthenticationProgramStateBTC,
-        continue: (s) =>
-            s.error === undefined && s.ip < s.instructions.length,
+        continue: (s) => s.error === undefined && s.ip < s.instructions.length,
 
         evaluate: (program, stateEvaluate) => {
 
@@ -170,10 +167,12 @@ export const createInstructionSetBTC = (
                     `Unlocking bytecode (${unlockingBytecode.length} B) exceeds ConsensusBTC.maximumBytecodeLength.`
                 );
             }
+
             if (authenticationInstructionsAreMalformed(unlockingInstr)) {
                 return applyError(initialState, AuthenticationErrorCommon.malformedUnlockingBytecode);
             }
-            if (!isPushOnly(unlockingBytecode)) {
+
+            if (policy && !isPushOnly(unlockingBytecode)) {
                 return applyError(initialState, AuthenticationErrorCommon.requiresPushOnly);
             }
 
@@ -228,7 +227,6 @@ export const createInstructionSetBTC = (
         operations: {
 
             [OpcodesBTC.OP_0]: conditionallyPush,
-
             ...Object.fromEntries(
                 [...Array(75).keys()].map((i) => [0x01 + i, conditionallyPush])
             ),
@@ -236,10 +234,8 @@ export const createInstructionSetBTC = (
             [OpcodesBTC.OP_PUSHDATA_2]: conditionallyPush,
             [OpcodesBTC.OP_PUSHDATA_4]: conditionallyPush,
 
-            [OpcodesBTC.OP_1NEGATE]:
-                conditionallyEvaluateBtc(pushNumberOperation(-1)),
-            [OpcodesBTC.OP_RESERVED]:
-                conditionallyEvaluateBtc(reservedOperation),
+            [OpcodesBTC.OP_1NEGATE]: conditionallyEvaluateBtc(pushNumberOperation(-1)),
+            [OpcodesBTC.OP_RESERVED]: conditionallyEvaluateBtc(reservedOperation),
             ...Object.fromEntries(
                 [...Array(16).keys()].map((i) => [
                     OpcodesBTC.OP_1 + i,
@@ -304,17 +300,12 @@ export const createInstructionSetBTC = (
             [OpcodesBTC.OP_BOOLAND]: conditionallyEvaluateBtc(opBoolAnd),
             [OpcodesBTC.OP_BOOLOR]: conditionallyEvaluateBtc(opBoolOr),
             [OpcodesBTC.OP_NUMEQUAL]: conditionallyEvaluateBtc(opNumEqual),
-            [OpcodesBTC.OP_NUMEQUALVERIFY]:
-                conditionallyEvaluateBtc(opNumEqualVerify),
-            [OpcodesBTC.OP_NUMNOTEQUAL]:
-                conditionallyEvaluateBtc(opNumNotEqual),
+            [OpcodesBTC.OP_NUMEQUALVERIFY]: conditionallyEvaluateBtc(opNumEqualVerify),
+            [OpcodesBTC.OP_NUMNOTEQUAL]: conditionallyEvaluateBtc(opNumNotEqual),
             [OpcodesBTC.OP_LESSTHAN]: conditionallyEvaluateBtc(opLessThan),
-            [OpcodesBTC.OP_GREATERTHAN]:
-                conditionallyEvaluateBtc(opGreaterThan),
-            [OpcodesBTC.OP_LESSTHANOREQUAL]:
-                conditionallyEvaluateBtc(opLessThanOrEqual),
-            [OpcodesBTC.OP_GREATERTHANOREQUAL]:
-                conditionallyEvaluateBtc(opGreaterThanOrEqual),
+            [OpcodesBTC.OP_GREATERTHAN]: conditionallyEvaluateBtc(opGreaterThan),
+            [OpcodesBTC.OP_LESSTHANOREQUAL]: conditionallyEvaluateBtc(opLessThanOrEqual),
+            [OpcodesBTC.OP_GREATERTHANOREQUAL]: conditionallyEvaluateBtc(opGreaterThanOrEqual),
             [OpcodesBTC.OP_MIN]: conditionallyEvaluateBtc(opMin),
             [OpcodesBTC.OP_MAX]: conditionallyEvaluateBtc(opMax),
             [OpcodesBTC.OP_WITHIN]: conditionallyEvaluateBtc(opWithin),
@@ -334,8 +325,7 @@ export const createInstructionSetBTC = (
             [OpcodesBTC.OP_HASH256]: conditionallyEvaluateBtc(
                 opHash256BtcLimits({ sha256 })
             ),
-            [OpcodesBTC.OP_CODESEPARATOR]:
-                conditionallyEvaluateBtc(opCodeSeparator),
+            [OpcodesBTC.OP_CODESEPARATOR]: conditionallyEvaluateBtc(opCodeSeparator),
 
             [OpcodesBTC.OP_CHECKSIG]: conditionallyEvaluateBtc(
                 opCheckSigBtcLimits({ secp256k1, sha256 })
@@ -381,15 +371,18 @@ export const createInstructionSetBTC = (
         success: (state) => {
             if (state.error !== undefined) return state.error;
             if (state.controlStack.length !== 0) return AuthenticationErrorCommon.nonEmptyControlStack;
-            if (state.stack.length !== 1) return AuthenticationErrorCommon.requiresCleanStack;
-            if (!stackItemIsTruthy(state.stack[0]!))
-                return AuthenticationErrorCommon.unsuccessfulEvaluation;
+
+            if (policy && state.stack.length !== 1) return AuthenticationErrorCommon.requiresCleanStack;
+
+            const top = state.stack[state.stack.length - 1];
+            if (!top || !stackItemIsTruthy(top)) return AuthenticationErrorCommon.unsuccessfulEvaluation;
             return true;
         },
 
         undefined: undefinedOperationBtc,
 
         verify: ({ sourceOutputs, transaction }, evaluate, stateSuccess) => {
+
             if (transaction.inputs.length === 0) return 'Transactions must have at least one input.';
             if (transaction.outputs.length === 0) return 'Transactions must have at least one output.';
             if (transaction.inputs.length !== sourceOutputs.length)
@@ -401,7 +394,7 @@ export const createInstructionSetBTC = (
             if (txSize > ConsensusBTC.maximumTransactionSize)
                 return `Transaction is ${txSize} B; exceeds ConsensusBTC.maximumTransactionSize.`;
 
-            if (standard) {
+            if (standard && policy) {
                 if (transaction.version < 1 || transaction.version > ConsensusBTC.maximumTransactionVersion)
                     return `Standard tx version must be 1–${ConsensusBTC.maximumTransactionVersion}.`;
                 if (txSize > ConsensusBTC.maximumStandardTransactionSize)
